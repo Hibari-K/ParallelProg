@@ -132,11 +132,11 @@ int main(int argc, char **argv){
     start = MPI_Wtime();
 
     for(step = 0; step < 10; step++){
-    
+
         if(rank==0){
             printf("step: %d\n", step);
         }
-  
+
         for(i = myrank*split; i < (myrank+1)*split; i += NUM_PD){
 
             zax = _mm512_setzero_pd();
@@ -151,138 +151,326 @@ int main(int argc, char **argv){
             for(j = 0; j < N; j+=4){
 
                 __m512d ztmp, zsqr, zr;
-                __mmask8 k1;
+                __m512d ztmp2, zsqr2, zr2;
+                __m512d ztmp3, zsqr3, zr3;
+                __m512d ztmp4, zsqr4, zr4;
+                __mmask8 k1, k2, k3, k4;
                 __m512d zxj, zyj, zzj;
+                __m512d zxj2, zyj2, zzj2;
+                __m512d zxj3, zyj3, zzj3;
+                __m512d zxj4, zyj4, zzj4;
                 __m512d zrx, zry, zrz;
-                __m512d zm;
+                __m512d zrx2, zry2, zrz2;
+                __m512d zrx3, zry3, zrz3;
+                __m512d zrx4, zry4, zrz4;
+                __m512d zm, zm2, zm3, zm4;
                 __m512d denom, numer, fixed;
+                __m512d denom2, numer2, fixed2;
+                __m512d denom3, numer3, fixed3;
+                __m512d denom4, numer4, fixed4;
+                __m512d tmp11, tmp21, tmp31;
+                __m512d tmp12, tmp22, tmp32;
+                __m512d tmp13, tmp23, tmp33;
+                __m512d tmp14, tmp24, tmp34;
 
-                zxj = _mm512_set1_pd(xi[j]);
-                zyj = _mm512_set1_pd(yi[j]);
-                zzj = _mm512_set1_pd(zi[j]);
                 
-                zrx = _mm512_sub_pd(zxi, zxj);
-                zry = _mm512_sub_pd(zyi, zyj);
-                zrz = _mm512_sub_pd(zzi, zzj);
-
-                ztmp = _mm512_add_pd(_mm512_mul_pd(zrx, zrx),
-                                     _mm512_fmadd_pd(zry, zry, _mm512_mul_pd(zrz, zrz)));
-
-                zm = _mm512_set1_pd(m[j]);
-
                 if(unlikely(i <= j && j < i+8)){
+
+                    zxj = _mm512_set1_pd(xi[j]);
+                    zyj = _mm512_set1_pd(yi[j]);
+                    zzj = _mm512_set1_pd(zi[j]);
+                    
+                    zxj2 = _mm512_set1_pd(xi[j+1]);
+                    zyj2 = _mm512_set1_pd(yi[j+1]);
+                    zzj2 = _mm512_set1_pd(zi[j+1]);
+                    
+                    zxj3 = _mm512_set1_pd(xi[j+2]);
+                    zyj3 = _mm512_set1_pd(yi[j+2]);
+                    zzj3 = _mm512_set1_pd(zi[j+2]);
+                    
+                    zxj4 = _mm512_set1_pd(xi[j+3]);
+                    zyj4 = _mm512_set1_pd(yi[j+3]);
+                    zzj4 = _mm512_set1_pd(zi[j+3]);
+                    
+                    
+                    zrx = _mm512_sub_pd(zxi, zxj);
+                    zry = _mm512_sub_pd(zyi, zyj);
+                    zrz = _mm512_sub_pd(zzi, zzj);
+
+                    zrx2 = _mm512_sub_pd(zxi, zxj2);
+                    zry2 = _mm512_sub_pd(zyi, zyj2);
+                    zrz2 = _mm512_sub_pd(zzi, zzj2);
+
+                    zrx3 = _mm512_sub_pd(zxi, zxj3);
+                    zry3 = _mm512_sub_pd(zyi, zyj3);
+                    zrz3 = _mm512_sub_pd(zzi, zzj3);
+
+                    zrx4 = _mm512_sub_pd(zxi, zxj4);
+                    zry4 = _mm512_sub_pd(zyi, zyj4);
+                    zrz4 = _mm512_sub_pd(zzi, zzj4);
+
+                    
+                    tmp11 = _mm512_mul_pd(zrx, zrx);
+                    tmp21 = _mm512_mul_pd(zry, zry);
+                    tmp31 = _mm512_mul_pd(zrz, zrz);
+                    
+                    tmp12 = _mm512_mul_pd(zrx2, zrx2);
+                    tmp22 = _mm512_mul_pd(zry2, zry2);
+                    tmp32 = _mm512_mul_pd(zrz2, zrz2);
+                    
+                    tmp13 = _mm512_mul_pd(zrx3, zrx3);
+                    tmp23 = _mm512_mul_pd(zry3, zry3);
+                    tmp33 = _mm512_mul_pd(zrz3, zrz3);
+                    
+                    tmp14 = _mm512_mul_pd(zrx4, zrx4);
+                    tmp24 = _mm512_mul_pd(zry4, zry4);
+                    tmp34 = _mm512_mul_pd(zrz4, zrz4);
+                    
+                    
+                    tmp11 = _mm512_add_pd(tmp11, tmp21);
+                    tmp12 = _mm512_add_pd(tmp12, tmp22);
+                    tmp13 = _mm512_add_pd(tmp13, tmp23);
+                    tmp14 = _mm512_add_pd(tmp14, tmp24);
+                    
+                    ztmp  = _mm512_add_pd(tmp11, tmp31);
+                    ztmp2 = _mm512_add_pd(tmp12, tmp32);
+                    ztmp3 = _mm512_add_pd(tmp13, tmp33);
+                    ztmp4 = _mm512_add_pd(tmp14, tmp34);
+                    
+                    
+                    
+                    //ztmp = _mm512_add_pd(_mm512_mul_pd(zrx, zrx),
+                    //                     _mm512_fmadd_pd(zry, zry, _mm512_mul_pd(zrz, zrz)));
+
+                    
+                    // if  i <= j < i+8
                     k1 = _mm512_cmpeq_pd_mask(zero, ztmp);
-                    ztmp = _mm512_mask_mov_pd(ztmp, k1, one);
-                    zm = _mm512_mask_mov_pd(zm, k1, zero);
+                    k2 = _mm512_cmpeq_pd_mask(zero, ztmp2);
+                    ztmp  = _mm512_mask_mov_pd(ztmp, k1, one);
+                    ztmp2 = _mm512_mask_mov_pd(ztmp2, k2, one);
+                    zm =  _mm512_mask_mov_pd(zm, k1, zero);
+                    zm2 = _mm512_mask_mov_pd(zm2, k2, zero);
+                    
+                    k3 = _mm512_cmpeq_pd_mask(zero, ztmp3);
+                    k4 = _mm512_cmpeq_pd_mask(zero, ztmp4);
+                    ztmp3  = _mm512_mask_mov_pd(ztmp3, k3, one);
+                    ztmp4 = _mm512_mask_mov_pd(ztmp4, k4, one);
+                    zm3 = _mm512_mask_mov_pd(zm3, k3, zero);
+                    zm4 = _mm512_mask_mov_pd(zm4, k4, zero);
+                    // endif
+                    
+                    zsqr = _mm512_rsqrt28_pd(ztmp);
+                    zsqr2 = _mm512_rsqrt28_pd(ztmp2);
+                    zsqr3 = _mm512_rsqrt28_pd(ztmp3);
+                    zsqr4 = _mm512_rsqrt28_pd(ztmp4);
+                    
+                    zr   = _mm512_rcp28_pd(ztmp);
+                    zr2  = _mm512_rcp28_pd(ztmp2);
+                    zr3  = _mm512_rcp28_pd(ztmp3);
+                    zr4  = _mm512_rcp28_pd(ztmp4);
+
+                    
+                    zm  = _mm512_set1_pd(m[j]);
+                    zm2 = _mm512_set1_pd(m[j+1]);
+                    zm3 = _mm512_set1_pd(m[j+2]);
+                    zm4 = _mm512_set1_pd(m[j+3]);
+                    
+
+                    denom = _mm512_mul_pd(zr, zsqr);    // r * r * r
+                    numer = _mm512_mul_pd(zG, zm);      // G * m[j]
+                    fixed = _mm512_mul_pd(denom, numer);
+
+                    denom2 = _mm512_mul_pd(zr2, zsqr2);    // r * r * r
+                    numer2 = _mm512_mul_pd(zG, zm2);      // G * m[j]
+                    fixed2 = _mm512_mul_pd(denom2, numer2);
+
+                    denom3 = _mm512_mul_pd(zr3, zsqr3);    // r * r * r
+                    numer3 = _mm512_mul_pd(zG, zm3);      // G * m[j]
+                    fixed3 = _mm512_mul_pd(denom3, numer3);
+
+                    denom4 = _mm512_mul_pd(zr4, zsqr4);    // r * r * r
+                    numer4 = _mm512_mul_pd(zG, zm4);      // G * m[j]
+                    fixed4 = _mm512_mul_pd(denom4, numer4);
+
+
+                    tmp11 = _mm512_mul_pd(fixed, zrx);
+                    tmp21 = _mm512_mul_pd(fixed, zry);
+                    tmp31 = _mm512_mul_pd(fixed, zrz);
+                    
+                    tmp12 = _mm512_mul_pd(fixed2, zrx2);
+                    tmp22 = _mm512_mul_pd(fixed2, zry2);
+                    tmp32 = _mm512_mul_pd(fixed2, zrz2);
+                    
+                    tmp13 = _mm512_mul_pd(fixed3, zrx3);
+                    tmp23 = _mm512_mul_pd(fixed3, zry3);
+                    tmp33 = _mm512_mul_pd(fixed3, zrz3);
+                    
+                    tmp14 = _mm512_mul_pd(fixed4, zrx4);
+                    tmp24 = _mm512_mul_pd(fixed4, zry4);
+                    tmp34 = _mm512_mul_pd(fixed4, zrz4);
+                    
+
+                    
+                    zax = _mm512_add_pd(tmp11, zax);
+                    zax = _mm512_add_pd(tmp12, zax);
+                    zax = _mm512_add_pd(tmp13, zax);
+                    zax = _mm512_add_pd(tmp14, zax);
+                    
+                    zay = _mm512_add_pd(tmp21, zay);
+                    zay = _mm512_add_pd(tmp22, zay);
+                    zay = _mm512_add_pd(tmp23, zay);
+                    zay = _mm512_add_pd(tmp24, zay);
+                    
+                    zaz = _mm512_add_pd(tmp31, zaz);
+                    zaz = _mm512_add_pd(tmp32, zaz);
+                    zaz = _mm512_add_pd(tmp33, zaz);
+                    zaz = _mm512_add_pd(tmp34, zaz);
+                    
+                    _mm512_store_pd(ax, zax);
+                    _mm512_store_pd(ay, zay);
+                    _mm512_store_pd(az, zaz);
+                
                 }
-                
-                zsqr = _mm512_rsqrt28_pd(ztmp);
-                zr   = _mm512_rcp28_pd(ztmp);
+                else{
 
-                denom = _mm512_mul_pd(zr, zsqr);    // r * r * r
-                numer = _mm512_mul_pd(zG, zm);      // G * m[j]
-                fixed = _mm512_mul_pd(denom, numer);
+                    zxj = _mm512_set1_pd(xi[j]);
+                    zyj = _mm512_set1_pd(yi[j]);
+                    zzj = _mm512_set1_pd(zi[j]);
+                    
+                    zxj2 = _mm512_set1_pd(xi[j+1]);
+                    zyj2 = _mm512_set1_pd(yi[j+1]);
+                    zzj2 = _mm512_set1_pd(zi[j+1]);
+                    
+                    zxj3 = _mm512_set1_pd(xi[j+2]);
+                    zyj3 = _mm512_set1_pd(yi[j+2]);
+                    zzj3 = _mm512_set1_pd(zi[j+2]);
+                    
+                    zxj4 = _mm512_set1_pd(xi[j+3]);
+                    zyj4 = _mm512_set1_pd(yi[j+3]);
+                    zzj4 = _mm512_set1_pd(zi[j+3]);
+                    
+                    
+                    zrx = _mm512_sub_pd(zxi, zxj);
+                    zry = _mm512_sub_pd(zyi, zyj);
+                    zrz = _mm512_sub_pd(zzi, zzj);
 
-                zax = _mm512_fmadd_pd(fixed, zrx, zax);
-                zay = _mm512_fmadd_pd(fixed, zry, zay);
-                zaz = _mm512_fmadd_pd(fixed, zrz, zaz);
+                    zrx2 = _mm512_sub_pd(zxi, zxj2);
+                    zry2 = _mm512_sub_pd(zyi, zyj2);
+                    zrz2 = _mm512_sub_pd(zzi, zzj2);
 
-                // 2
-                zxj = _mm512_set1_pd(xi[j+1]);
-                zyj = _mm512_set1_pd(yi[j+1]);
-                zzj = _mm512_set1_pd(zi[j+1]);
-                
-                zrx = _mm512_sub_pd(zxi, zxj);
-                zry = _mm512_sub_pd(zyi, zyj);
-                zrz = _mm512_sub_pd(zzi, zzj);
+                    zrx3 = _mm512_sub_pd(zxi, zxj3);
+                    zry3 = _mm512_sub_pd(zyi, zyj3);
+                    zrz3 = _mm512_sub_pd(zzi, zzj3);
 
-                ztmp = _mm512_add_pd(_mm512_mul_pd(zrx, zrx),
-                                     _mm512_fmadd_pd(zry, zry, _mm512_mul_pd(zrz, zrz)));
+                    zrx4 = _mm512_sub_pd(zxi, zxj4);
+                    zry4 = _mm512_sub_pd(zyi, zyj4);
+                    zrz4 = _mm512_sub_pd(zzi, zzj4);
 
-                zm = _mm512_set1_pd(m[j+1]);
+                    
+                    tmp11 = _mm512_mul_pd(zrx, zrx);
+                    tmp21 = _mm512_mul_pd(zry, zry);
+                    tmp31 = _mm512_mul_pd(zrz, zrz);
+                    
+                    tmp12 = _mm512_mul_pd(zrx2, zrx2);
+                    tmp22 = _mm512_mul_pd(zry2, zry2);
+                    tmp32 = _mm512_mul_pd(zrz2, zrz2);
+                    
+                    tmp13 = _mm512_mul_pd(zrx3, zrx3);
+                    tmp23 = _mm512_mul_pd(zry3, zry3);
+                    tmp33 = _mm512_mul_pd(zrz3, zrz3);
+                    
+                    tmp14 = _mm512_mul_pd(zrx4, zrx4);
+                    tmp24 = _mm512_mul_pd(zry4, zry4);
+                    tmp34 = _mm512_mul_pd(zrz4, zrz4);
+                    
+                    
+                    tmp11 = _mm512_add_pd(tmp11, tmp21);
+                    tmp12 = _mm512_add_pd(tmp12, tmp22);
+                    tmp13 = _mm512_add_pd(tmp13, tmp23);
+                    tmp14 = _mm512_add_pd(tmp14, tmp24);
+                    
+                    ztmp  = _mm512_add_pd(tmp11, tmp31);
+                    ztmp2 = _mm512_add_pd(tmp12, tmp32);
+                    ztmp3 = _mm512_add_pd(tmp13, tmp33);
+                    ztmp4 = _mm512_add_pd(tmp14, tmp34);
+                    
+                    
+                    //ztmp = _mm512_add_pd(_mm512_mul_pd(zrx, zrx),
+                    //                     _mm512_fmadd_pd(zry, zry, _mm512_mul_pd(zrz, zrz)));
 
-                if(unlikely(i <= j && j < i+8)){
-                    k1 = _mm512_cmpeq_pd_mask(zero, ztmp);
-                    ztmp = _mm512_mask_mov_pd(ztmp, k1, one);
-                    zm = _mm512_mask_mov_pd(zm, k1, zero);
+                    zsqr = _mm512_rsqrt28_pd(ztmp);
+                    zsqr2 = _mm512_rsqrt28_pd(ztmp2);
+                    zsqr3 = _mm512_rsqrt28_pd(ztmp3);
+                    zsqr4 = _mm512_rsqrt28_pd(ztmp4);
+                    
+                    zr   = _mm512_rcp28_pd(ztmp);
+                    zr2  = _mm512_rcp28_pd(ztmp2);
+                    zr3  = _mm512_rcp28_pd(ztmp3);
+                    zr4  = _mm512_rcp28_pd(ztmp4);
+
+                    
+                    zm  = _mm512_set1_pd(m[j]);
+                    zm2 = _mm512_set1_pd(m[j+1]);
+                    zm3 = _mm512_set1_pd(m[j+2]);
+                    zm4 = _mm512_set1_pd(m[j+3]);
+                    
+
+                    denom = _mm512_mul_pd(zr, zsqr);    // r * r * r
+                    numer = _mm512_mul_pd(zG, zm);      // G * m[j]
+                    fixed = _mm512_mul_pd(denom, numer);
+
+                    denom2 = _mm512_mul_pd(zr2, zsqr2);    // r * r * r
+                    numer2 = _mm512_mul_pd(zG, zm2);      // G * m[j]
+                    fixed2 = _mm512_mul_pd(denom2, numer2);
+
+                    denom3 = _mm512_mul_pd(zr3, zsqr3);    // r * r * r
+                    numer3 = _mm512_mul_pd(zG, zm3);      // G * m[j]
+                    fixed3 = _mm512_mul_pd(denom3, numer3);
+
+                    denom4 = _mm512_mul_pd(zr4, zsqr4);    // r * r * r
+                    numer4 = _mm512_mul_pd(zG, zm4);      // G * m[j]
+                    fixed4 = _mm512_mul_pd(denom4, numer4);
+
+
+                    tmp11 = _mm512_mul_pd(fixed, zrx);
+                    tmp21 = _mm512_mul_pd(fixed, zry);
+                    tmp31 = _mm512_mul_pd(fixed, zrz);
+                    
+                    tmp12 = _mm512_mul_pd(fixed2, zrx2);
+                    tmp22 = _mm512_mul_pd(fixed2, zry2);
+                    tmp32 = _mm512_mul_pd(fixed2, zrz2);
+                    
+                    tmp13 = _mm512_mul_pd(fixed3, zrx3);
+                    tmp23 = _mm512_mul_pd(fixed3, zry3);
+                    tmp33 = _mm512_mul_pd(fixed3, zrz3);
+                    
+                    tmp14 = _mm512_mul_pd(fixed4, zrx4);
+                    tmp24 = _mm512_mul_pd(fixed4, zry4);
+                    tmp34 = _mm512_mul_pd(fixed4, zrz4);
+                    
+
+                    
+                    zax = _mm512_add_pd(tmp11, zax);
+                    zax = _mm512_add_pd(tmp12, zax);
+                    zax = _mm512_add_pd(tmp13, zax);
+                    zax = _mm512_add_pd(tmp14, zax);
+                    
+                    zay = _mm512_add_pd(tmp21, zay);
+                    zay = _mm512_add_pd(tmp22, zay);
+                    zay = _mm512_add_pd(tmp23, zay);
+                    zay = _mm512_add_pd(tmp24, zay);
+                    
+                    zaz = _mm512_add_pd(tmp31, zaz);
+                    zaz = _mm512_add_pd(tmp32, zaz);
+                    zaz = _mm512_add_pd(tmp33, zaz);
+                    zaz = _mm512_add_pd(tmp34, zaz);
+                    
+
+                    _mm512_store_pd(ax, zax);
+                    _mm512_store_pd(ay, zay);
+                    _mm512_store_pd(az, zaz);
                 }
-                
-                zsqr = _mm512_rsqrt28_pd(ztmp);
-                zr   = _mm512_rcp28_pd(ztmp);
 
-                denom = _mm512_mul_pd(zr, zsqr);    // r * r * r
-                numer = _mm512_mul_pd(zG, zm);      // G * m[j]
-                fixed = _mm512_mul_pd(denom, numer);
-
-                zax = _mm512_fmadd_pd(fixed, zrx, zax);
-                zay = _mm512_fmadd_pd(fixed, zry, zay);
-                zaz = _mm512_fmadd_pd(fixed, zrz, zaz);
-
-                // 3
-                zxj = _mm512_set1_pd(xi[j+2]);
-                zyj = _mm512_set1_pd(yi[j+2]);
-                zzj = _mm512_set1_pd(zi[j+2]);
-                
-                zrx = _mm512_sub_pd(zxi, zxj);
-                zry = _mm512_sub_pd(zyi, zyj);
-                zrz = _mm512_sub_pd(zzi, zzj);
-
-                ztmp = _mm512_add_pd(_mm512_mul_pd(zrx, zrx),
-                                     _mm512_fmadd_pd(zry, zry, _mm512_mul_pd(zrz, zrz)));
-
-                zm = _mm512_set1_pd(m[j+2]);
-
-                if(unlikely(i <= j && j < i+8)){
-                    k1 = _mm512_cmpeq_pd_mask(zero, ztmp);
-                    ztmp = _mm512_mask_mov_pd(ztmp, k1, one);
-                    zm = _mm512_mask_mov_pd(zm, k1, zero);
-                }
-                
-                zsqr = _mm512_rsqrt28_pd(ztmp);
-                zr   = _mm512_rcp28_pd(ztmp);
-
-                denom = _mm512_mul_pd(zr, zsqr);    // r * r * r
-                numer = _mm512_mul_pd(zG, zm);      // G * m[j]
-                fixed = _mm512_mul_pd(denom, numer);
-
-                zax = _mm512_fmadd_pd(fixed, zrx, zax);
-                zay = _mm512_fmadd_pd(fixed, zry, zay);
-                zaz = _mm512_fmadd_pd(fixed, zrz, zaz);
-
-                // 4
-                zxj = _mm512_set1_pd(xi[j+3]);
-                zyj = _mm512_set1_pd(yi[j+3]);
-                zzj = _mm512_set1_pd(zi[j+3]);
-                
-                zrx = _mm512_sub_pd(zxi, zxj);
-                zry = _mm512_sub_pd(zyi, zyj);
-                zrz = _mm512_sub_pd(zzi, zzj);
-
-                ztmp = _mm512_add_pd(_mm512_mul_pd(zrx, zrx),
-                                     _mm512_fmadd_pd(zry, zry, _mm512_mul_pd(zrz, zrz)));
-
-                zm = _mm512_set1_pd(m[j+3]);
-
-                if(unlikely(i <= j && j < i+8)){
-                    k1 = _mm512_cmpeq_pd_mask(zero, ztmp);
-                    ztmp = _mm512_mask_mov_pd(ztmp, k1, one);
-                    zm = _mm512_mask_mov_pd(zm, k1, zero);
-                }
-                
-                zsqr = _mm512_rsqrt28_pd(ztmp);
-                zr   = _mm512_rcp28_pd(ztmp);
-
-                denom = _mm512_mul_pd(zr, zsqr);    // r * r * r
-                numer = _mm512_mul_pd(zG, zm);      // G * m[j]
-                fixed = _mm512_mul_pd(denom, numer);
-
-                zax = _mm512_fmadd_pd(fixed, zrx, zax);
-                zay = _mm512_fmadd_pd(fixed, zry, zay);
-                zaz = _mm512_fmadd_pd(fixed, zrz, zaz);
-
-                _mm512_store_pd(ax, zax);
-                _mm512_store_pd(ay, zay);
-                _mm512_store_pd(az, zaz);
             }
       
             zvx = _mm512_load_pd(vx + i);
